@@ -18,7 +18,12 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Generate Project Files Safely
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.4'
+
+      - name: Generate Project Files
         shell: python
         run: |
           import os
@@ -804,10 +809,7 @@ jobs:
                   f.write(content.strip() + "\n")
 
       - name: Build Debug APK
-        run: |
-          gradle wrapper --gradle-version 8.4
-          chmod +x gradlew
-          ./gradlew assembleDebug
+        run: gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
