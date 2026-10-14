@@ -18,16 +18,13 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Generate Android App & Widget Project
+      - name: Generate Project Files Safely
+        shell: python
         run: |
-          mkdir -p app/src/main/java/com/imran/namaztracker
-          mkdir -p app/src/main/res/layout
-          mkdir -p app/src/main/res/xml
-          mkdir -p app/src/main/res/drawable
-          mkdir -p app/src/main/res/values
+          import os
 
-          cat << 'EOF' > settings.gradle
-          pluginManagement {
+          files = {
+              "settings.gradle": """pluginManagement {
               repositories {
                   google()
                   mavenCentral()
@@ -43,24 +40,21 @@ jobs:
           }
           rootProject.name = "NamazTracker"
           include ':app'
-          EOF
+          """,
 
-          cat << 'EOF' > build.gradle
-          plugins {
+              "build.gradle": """plugins {
               id 'com.android.application' version '8.2.0' apply false
               id 'org.jetbrains.kotlin.android' version '1.9.20' apply false
           }
-          EOF
+          """,
 
-          cat << 'EOF' > gradle.properties
-          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+              "gradle.properties": """org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
           android.useAndroidX=true
           kotlin.code.style=official
           android.nonTransitiveRClass=true
-          EOF
+          """,
 
-          cat << 'EOF' > app/build.gradle
-          plugins {
+              "app/build.gradle": """plugins {
               id 'com.android.application'
               id 'org.jetbrains.kotlin.android'
           }
@@ -96,10 +90,9 @@ jobs:
               implementation 'androidx.appcompat:appcompat:1.6.1'
               implementation 'com.google.android.material:material:1.11.0'
           }
-          EOF
+          """,
 
-          cat << 'EOF' > app/src/main/AndroidManifest.xml
-          <?xml version="1.0" encoding="utf-8"?>
+              "app/src/main/AndroidManifest.xml": """<?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.VIBRATE" />
@@ -132,28 +125,25 @@ jobs:
                   </receiver>
               </application>
           </manifest>
-          EOF
+          """,
 
-          cat << 'EOF' > app/src/main/res/drawable/widget_bg.xml
-          <?xml version="1.0" encoding="utf-8"?>
+              "app/src/main/res/drawable/widget_bg.xml": """<?xml version="1.0" encoding="utf-8"?>
           <shape xmlns:android="http://schemas.android.com/apk/res/android">
               <solid android:color="#064E3B" />
               <corners android:radius="16dp" />
               <stroke android:width="1dp" android:color="#10B981" />
           </shape>
-          EOF
+          """,
 
-          cat << 'EOF' > app/src/main/res/drawable/card_bg.xml
-          <?xml version="1.0" encoding="utf-8"?>
+              "app/src/main/res/drawable/card_bg.xml": """<?xml version="1.0" encoding="utf-8"?>
           <shape xmlns:android="http://schemas.android.com/apk/res/android">
               <solid android:color="#064E3B" />
               <corners android:radius="14dp" />
               <stroke android:width="1dp" android:color="#047857" />
           </shape>
-          EOF
+          """,
 
-          cat << 'EOF' > app/src/main/res/xml/namaz_widget_info.xml
-          <?xml version="1.0" encoding="utf-8"?>
+              "app/src/main/res/xml/namaz_widget_info.xml": """<?xml version="1.0" encoding="utf-8"?>
           <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
               android:minWidth="250dp"
               android:minHeight="110dp"
@@ -161,10 +151,9 @@ jobs:
               android:initialLayout="@layout/namaz_widget"
               android:resizeMode="horizontal|vertical"
               android:widgetCategory="home_screen" />
-          EOF
+          """,
 
-          cat << 'EOF' > app/src/main/res/layout/namaz_widget.xml
-          <?xml version="1.0" encoding="utf-8"?>
+              "app/src/main/res/layout/namaz_widget.xml": """<?xml version="1.0" encoding="utf-8"?>
           <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:id="@+id/widget_root"
               android:layout_width="match_parent"
@@ -228,10 +217,9 @@ jobs:
                   </LinearLayout>
               </LinearLayout>
           </LinearLayout>
-          EOF
+          """,
 
-          cat << 'EOF' > app/src/main/res/layout/activity_main.xml
-          <?xml version="1.0" encoding="utf-8"?>
+              "app/src/main/res/layout/activity_main.xml": """<?xml version="1.0" encoding="utf-8"?>
           <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
               android:layout_width="match_parent"
               android:layout_height="match_parent"
@@ -260,7 +248,6 @@ jobs:
                       android:textSize="13sp"
                       android:layout_marginTop="4dp" />
 
-                  <!-- City & Asr Calculation Card -->
                   <LinearLayout
                       android:layout_width="match_parent"
                       android:layout_height="wrap_content"
@@ -330,7 +317,6 @@ jobs:
                       </RadioGroup>
                   </LinearLayout>
 
-                  <!-- Prayer Checklist Card -->
                   <LinearLayout
                       android:layout_width="match_parent"
                       android:layout_height="wrap_content"
@@ -367,7 +353,6 @@ jobs:
                           android:layout_marginTop="8dp" />
                   </LinearLayout>
 
-                  <!-- Qibla Finder Card -->
                   <LinearLayout
                       android:layout_width="match_parent"
                       android:layout_height="wrap_content"
@@ -404,7 +389,6 @@ jobs:
                           android:layout_marginTop="4dp" />
                   </LinearLayout>
 
-                  <!-- Tasbih Counter Card -->
                   <LinearLayout
                       android:layout_width="match_parent"
                       android:layout_height="wrap_content"
@@ -474,10 +458,9 @@ jobs:
 
               </LinearLayout>
           </ScrollView>
-          EOF
+          """,
 
-          cat << 'EOF' > app/src/main/java/com/imran/namaztracker/NamazWidget.kt
-          package com.imran.namaztracker
+              "app/src/main/java/com/imran/namaztracker/NamazWidget.kt": """package com.imran.namaztracker
 
           import android.app.PendingIntent
           import android.appwidget.AppWidgetManager
@@ -528,10 +511,9 @@ jobs:
                   }
               }
           }
-          EOF
+          """,
 
-          cat << 'EOF' > app/src/main/java/com/imran/namaztracker/MainActivity.kt
-          package com.imran.namaztracker
+              "app/src/main/java/com/imran/namaztracker/MainActivity.kt": """package com.imran.namaztracker
 
           import android.content.Context
           import android.hardware.Sensor
@@ -610,7 +592,6 @@ jobs:
                   etCity.setText(savedCity)
                   if (savedSchool == 1) rbHanafi.isChecked = true else rbStandard.isChecked = true
 
-                  // Setup Daily Checklist
                   val todayKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
                   val boxes = listOf(
                       Pair("Fajr", cbFajr),
@@ -647,7 +628,6 @@ jobs:
                       fetchPrayerTimes(city, school)
                   }
 
-                  // Setup Digital Tasbih Counter
                   var tasbih = prefs.getInt("tasbih_count", 0)
                   updateTasbihUI(tasbih)
 
@@ -665,7 +645,6 @@ jobs:
                       vibratePhone(80)
                   }
 
-                  // Setup Compass Sensor for Qibla
                   sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
                   accelerometer = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
                   magnetometer = sensorManager?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
@@ -814,7 +793,15 @@ jobs:
                   }
               }
           }
-          EOF
+          """
+          }
+
+          for path, content in files.items():
+              dirpath = os.path.dirname(path)
+              if dirpath:
+                  os.makedirs(dirpath, exist_ok=True)
+              with open(path, "w", encoding="utf-8") as f:
+                  f.write(content.strip() + "\n")
 
       - name: Build Debug APK
         run: |
