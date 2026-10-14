@@ -18,18 +18,19 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.4'
-
-      - name: Generate Project Files
-        shell: python
+      - name: Create Project and Build APK
         run: |
-          import os
+          python3 -c '
+          import pathlib
 
-          files = {
-              "settings.gradle": """pluginManagement {
+          def w(p, c):
+              path = pathlib.Path(p)
+              path.parent.mkdir(parents=True, exist_ok=True)
+              lines = [line.lstrip() for line in c.strip().splitlines()]
+              path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+          w("settings.gradle", """
+          pluginManagement {
               repositories {
                   google()
                   mavenCentral()
@@ -44,429 +45,392 @@ jobs:
               }
           }
           rootProject.name = "NamazTracker"
-          include ':app'
-          """,
+          include(":app")
+          """)
 
-              "build.gradle": """plugins {
-              id 'com.android.application' version '8.2.0' apply false
-              id 'org.jetbrains.kotlin.android' version '1.9.20' apply false
+          w("build.gradle", """
+          plugins {
+              id("com.android.application") version "8.2.0" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.20" apply false
           }
-          """,
+          """)
 
-              "gradle.properties": """org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          w("gradle.properties", """
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
           android.useAndroidX=true
           kotlin.code.style=official
           android.nonTransitiveRClass=true
-          """,
+          """)
 
-              "app/build.gradle": """plugins {
-              id 'com.android.application'
-              id 'org.jetbrains.kotlin.android'
+          w("app/build.gradle", """
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
           }
-
           android {
-              namespace 'com.imran.namaztracker'
-              compileSdk 34
-
+              namespace = "com.imran.namaztracker"
+              compileSdk = 34
               defaultConfig {
-                  applicationId "com.imran.namaztracker"
-                  minSdk 26
-                  targetSdk 34
-                  versionCode 2
-                  versionName "2.0"
-              }
-
-              buildTypes {
-                  release {
-                      minifyEnabled false
-                  }
+                  applicationId = "com.imran.namaztracker"
+                  minSdk = 26
+                  targetSdk = 34
+                  versionCode = 2
+                  versionName = "2.0"
               }
               compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_17
-                  targetCompatibility JavaVersion.VERSION_17
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
               }
               kotlinOptions {
-                  jvmTarget = '17'
+                  jvmTarget = "17"
               }
           }
-
           dependencies {
-              implementation 'androidx.core:core-ktx:1.12.0'
-              implementation 'androidx.appcompat:appcompat:1.6.1'
-              implementation 'com.google.android.material:material:1.11.0'
+              implementation("androidx.core:core-ktx:1.12.0")
+              implementation("androidx.appcompat:appcompat:1.6.1")
+              implementation("com.google.android.material:material:1.11.0")
           }
-          """,
+          """)
 
-              "app/src/main/AndroidManifest.xml": """<?xml version="1.0" encoding="utf-8"?>
+          w("app/src/main/AndroidManifest.xml", """
+          <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.INTERNET" />
-              <uses-permission android:name="android.permission.VIBRATE" />
-
-              <application
-                  android:allowBackup="true"
-                  android:label="Namaz Tracker Pro"
-                  android:supportsRtl="true"
-                  android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
-
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true"
-                      android:screenOrientation="portrait">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-
-                  <receiver
-                      android:name=".NamazWidget"
-                      android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                      </intent-filter>
-                      <meta-data
-                          android:name="android.appwidget.provider"
-                          android:resource="@xml/namaz_widget_info" />
-                  </receiver>
-              </application>
+          <uses-permission android:name="android.permission.INTERNET" />
+          <uses-permission android:name="android.permission.VIBRATE" />
+          <application
+          android:allowBackup="true"
+          android:label="Namaz Tracker Pro"
+          android:supportsRtl="true"
+          android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
+          <activity
+          android:name=".MainActivity"
+          android:exported="true"
+          android:screenOrientation="portrait">
+          <intent-filter>
+          <action android:name="android.intent.action.MAIN" />
+          <category android:name="android.intent.category.LAUNCHER" />
+          </intent-filter>
+          </activity>
+          <receiver
+          android:name=".NamazWidget"
+          android:exported="true">
+          <intent-filter>
+          <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+          </intent-filter>
+          <meta-data
+          android:name="android.appwidget.provider"
+          android:resource="@xml/namaz_widget_info" />
+          </receiver>
+          </application>
           </manifest>
-          """,
+          """)
 
-              "app/src/main/res/drawable/widget_bg.xml": """<?xml version="1.0" encoding="utf-8"?>
+          w("app/src/main/res/drawable/widget_bg.xml", """
+          <?xml version="1.0" encoding="utf-8"?>
           <shape xmlns:android="http://schemas.android.com/apk/res/android">
-              <solid android:color="#064E3B" />
-              <corners android:radius="16dp" />
-              <stroke android:width="1dp" android:color="#10B981" />
+          <solid android:color="#064E3B" />
+          <corners android:radius="16dp" />
+          <stroke android:width="1dp" android:color="#10B981" />
           </shape>
-          """,
+          """)
 
-              "app/src/main/res/drawable/card_bg.xml": """<?xml version="1.0" encoding="utf-8"?>
+          w("app/src/main/res/drawable/card_bg.xml", """
+          <?xml version="1.0" encoding="utf-8"?>
           <shape xmlns:android="http://schemas.android.com/apk/res/android">
-              <solid android:color="#064E3B" />
-              <corners android:radius="14dp" />
-              <stroke android:width="1dp" android:color="#047857" />
+          <solid android:color="#064E3B" />
+          <corners android:radius="14dp" />
+          <stroke android:width="1dp" android:color="#047857" />
           </shape>
-          """,
+          """)
 
-              "app/src/main/res/xml/namaz_widget_info.xml": """<?xml version="1.0" encoding="utf-8"?>
+          w("app/src/main/res/xml/namaz_widget_info.xml", """
+          <?xml version="1.0" encoding="utf-8"?>
           <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-              android:minWidth="250dp"
-              android:minHeight="110dp"
-              android:updatePeriodMillis="1800000"
-              android:initialLayout="@layout/namaz_widget"
-              android:resizeMode="horizontal|vertical"
-              android:widgetCategory="home_screen" />
-          """,
+          android:minWidth="250dp"
+          android:minHeight="110dp"
+          android:updatePeriodMillis="1800000"
+          android:initialLayout="@layout/namaz_widget"
+          android:resizeMode="horizontal|vertical"
+          android:widgetCategory="home_screen" />
+          """)
 
-              "app/src/main/res/layout/namaz_widget.xml": """<?xml version="1.0" encoding="utf-8"?>
+          w("app/src/main/res/layout/namaz_widget.xml", """
+          <?xml version="1.0" encoding="utf-8"?>
           <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:id="@+id/widget_root"
-              android:layout_width="match_parent"
-              android:layout_height="match_parent"
-              android:orientation="vertical"
-              android:background="@drawable/widget_bg"
-              android:padding="14dp">
-
-              <LinearLayout
-                  android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:orientation="horizontal">
-                  <TextView
-                      android:id="@+id/widget_city"
-                      android:layout_width="0dp"
-                      android:layout_height="wrap_content"
-                      android:layout_weight="1"
-                      android:text="🕌 Namaz Times (Rome)"
-                      android:textColor="#A7F3D0"
-                      android:textStyle="bold"
-                      android:textSize="14sp" />
-                  <TextView
-                      android:id="@+id/widget_school"
-                      android:layout_width="wrap_content"
-                      android:layout_height="wrap_content"
-                      android:text="Standard"
-                      android:textColor="#6EE7B7"
-                      android:textSize="11sp" />
-              </LinearLayout>
-
-              <LinearLayout
-                  android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:orientation="horizontal"
-                  android:layout_marginTop="12dp"
-                  android:weightSum="5">
-
-                  <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center">
-                      <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fajr" android:textColor="#D1FAE5" android:textSize="12sp"/>
-                      <TextView android:id="@+id/w_fajr" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textColor="#FFFFFF" android:textStyle="bold" android:textSize="14sp"/>
-                  </LinearLayout>
-
-                  <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center">
-                      <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Dhuhr" android:textColor="#D1FAE5" android:textSize="12sp"/>
-                      <TextView android:id="@+id/w_dhuhr" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textColor="#FFFFFF" android:textStyle="bold" android:textSize="14sp"/>
-                  </LinearLayout>
-
-                  <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center">
-                      <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Asr" android:textColor="#D1FAE5" android:textSize="12sp"/>
-                      <TextView android:id="@+id/w_asr" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textColor="#FFFFFF" android:textStyle="bold" android:textSize="14sp"/>
-                  </LinearLayout>
-
-                  <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center">
-                      <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Maghrib" android:textColor="#D1FAE5" android:textSize="12sp"/>
-                      <TextView android:id="@+id/w_maghrib" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textColor="#FFFFFF" android:textStyle="bold" android:textSize="14sp"/>
-                  </LinearLayout>
-
-                  <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center">
-                      <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Isha" android:textColor="#D1FAE5" android:textSize="12sp"/>
-                      <TextView android:id="@+id/w_isha" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textColor="#FFFFFF" android:textStyle="bold" android:textSize="14sp"/>
-                  </LinearLayout>
-              </LinearLayout>
+          android:id="@+id/widget_root"
+          android:layout_width="match_parent"
+          android:layout_height="match_parent"
+          android:orientation="vertical"
+          android:background="@drawable/widget_bg"
+          android:padding="14dp">
+          <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="horizontal">
+          <TextView
+          android:id="@+id/widget_city"
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:text="🕌 Namaz Times (Rome)"
+          android:textColor="#A7F3D0"
+          android:textStyle="bold"
+          android:textSize="14sp" />
+          <TextView
+          android:id="@+id/widget_school"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="Standard"
+          android:textColor="#6EE7B7"
+          android:textSize="11sp" />
           </LinearLayout>
-          """,
+          <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="horizontal"
+          android:layout_marginTop="12dp"
+          android:weightSum="5">
+          <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+          <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fajr" android:textColor="#D1FAE5" android:textSize="12sp"/>
+          <TextView android:id="@+id/w_fajr" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textColor="#FFFFFF" android:textStyle="bold" android:textSize="14sp"/>
+          </LinearLayout>
+          <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+          <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Dhuhr" android:textColor="#D1FAE5" android:textSize="12sp"/>
+          <TextView android:id="@+id/w_dhuhr" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textColor="#FFFFFF" android:textStyle="bold" android:textSize="14sp"/>
+          </LinearLayout>
+          <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+          <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Asr" android:textColor="#D1FAE5" android:textSize="12sp"/>
+          <TextView android:id="@+id/w_asr" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textColor="#FFFFFF" android:textStyle="bold" android:textSize="14sp"/>
+          </LinearLayout>
+          <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+          <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Maghrib" android:textColor="#D1FAE5" android:textSize="12sp"/>
+          <TextView android:id="@+id/w_maghrib" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textColor="#FFFFFF" android:textStyle="bold" android:textSize="14sp"/>
+          </LinearLayout>
+          <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+          <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Isha" android:textColor="#D1FAE5" android:textSize="12sp"/>
+          <TextView android:id="@+id/w_isha" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textColor="#FFFFFF" android:textStyle="bold" android:textSize="14sp"/>
+          </LinearLayout>
+          </LinearLayout>
+          </LinearLayout>
+          """)
 
-              "app/src/main/res/layout/activity_main.xml": """<?xml version="1.0" encoding="utf-8"?>
+          w("app/src/main/res/layout/activity_main.xml", """
+          <?xml version="1.0" encoding="utf-8"?>
           <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-              android:layout_width="match_parent"
-              android:layout_height="match_parent"
-              android:background="#022C22"
-              android:padding="18dp">
-
-              <LinearLayout
-                  android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:orientation="vertical">
-
-                  <TextView
-                      android:layout_width="wrap_content"
-                      android:layout_height="wrap_content"
-                      android:text="🕌 Namaz Tracker Pro"
-                      android:textColor="#FFFFFF"
-                      android:textSize="26sp"
-                      android:textStyle="bold" />
-
-                  <TextView
-                      android:id="@+id/tvDate"
-                      android:layout_width="wrap_content"
-                      android:layout_height="wrap_content"
-                      android:text="Loading Hijri &amp; Gregorian Date..."
-                      android:textColor="#6EE7B7"
-                      android:textSize="13sp"
-                      android:layout_marginTop="4dp" />
-
-                  <LinearLayout
-                      android:layout_width="match_parent"
-                      android:layout_height="wrap_content"
-                      android:orientation="vertical"
-                      android:background="@drawable/card_bg"
-                      android:padding="14dp"
-                      android:layout_marginTop="14dp">
-
-                      <LinearLayout
-                          android:layout_width="match_parent"
-                          android:layout_height="wrap_content"
-                          android:orientation="horizontal">
-
-                          <EditText
-                              android:id="@+id/etCity"
-                              android:layout_width="0dp"
-                              android:layout_height="wrap_content"
-                              android:layout_weight="1"
-                              android:hint="City (e.g. Rome)"
-                              android:text="Rome"
-                              android:textColor="#FFFFFF"
-                              android:textColorHint="#A7F3D0"
-                              android:backgroundTint="#10B981" />
-
-                          <Button
-                              android:id="@+id/btnFetch"
-                              android:layout_width="wrap_content"
-                              android:layout_height="wrap_content"
-                              android:text="Update"
-                              android:backgroundTint="#10B981"
-                              android:textColor="#022C22" />
-                      </LinearLayout>
-
-                      <TextView
-                          android:layout_width="wrap_content"
-                          android:layout_height="wrap_content"
-                          android:text="Asr Juristic Method:"
-                          android:textColor="#A7F3D0"
-                          android:textSize="13sp"
-                          android:layout_marginTop="8dp" />
-
-                      <RadioGroup
-                          android:id="@+id/rgSchool"
-                          android:layout_width="match_parent"
-                          android:layout_height="wrap_content"
-                          android:orientation="horizontal"
-                          android:layout_marginTop="4dp">
-
-                          <RadioButton
-                              android:id="@+id/rbStandard"
-                              android:layout_width="0dp"
-                              android:layout_height="wrap_content"
-                              android:layout_weight="1"
-                              android:text="Standard (Shafi'i)"
-                              android:textColor="#FFFFFF"
-                              android:buttonTint="#10B981"
-                              android:checked="true" />
-
-                          <RadioButton
-                              android:id="@+id/rbHanafi"
-                              android:layout_width="0dp"
-                              android:layout_height="wrap_content"
-                              android:layout_weight="1"
-                              android:text="Hanafi"
-                              android:textColor="#FFFFFF"
-                              android:buttonTint="#10B981" />
-                      </RadioGroup>
-                  </LinearLayout>
-
-                  <LinearLayout
-                      android:layout_width="match_parent"
-                      android:layout_height="wrap_content"
-                      android:orientation="vertical"
-                      android:background="@drawable/card_bg"
-                      android:padding="14dp"
-                      android:layout_marginTop="14dp">
-
-                      <TextView
-                          android:layout_width="wrap_content"
-                          android:layout_height="wrap_content"
-                          android:text="Today's Namaz &amp; Checklist"
-                          android:textColor="#A7F3D0"
-                          android:textSize="17sp"
-                          android:textStyle="bold"
-                          android:layout_marginBottom="6dp" />
-
-                      <CheckBox android:id="@+id/cbFajr" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Fajr: --:--" android:textColor="#FFFFFF" android:textSize="17sp" android:padding="8dp" android:buttonTint="#10B981" />
-                      <CheckBox android:id="@+id/cbSunrise" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Sunrise: --:-- (Info)" android:textColor="#6EE7B7" android:textSize="14sp" android:padding="6dp" android:enabled="false" android:buttonTint="#047857" />
-                      <CheckBox android:id="@+id/cbDhuhr" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Dhuhr: --:--" android:textColor="#FFFFFF" android:textSize="17sp" android:padding="8dp" android:buttonTint="#10B981" />
-                      <CheckBox android:id="@+id/cbAsr" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Asr: --:--" android:textColor="#FFFFFF" android:textSize="17sp" android:padding="8dp" android:buttonTint="#10B981" />
-                      <CheckBox android:id="@+id/cbMaghrib" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Maghrib: --:--" android:textColor="#FFFFFF" android:textSize="17sp" android:padding="8dp" android:buttonTint="#10B981" />
-                      <CheckBox android:id="@+id/cbIsha" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Isha: --:--" android:textColor="#FFFFFF" android:textSize="17sp" android:padding="8dp" android:buttonTint="#10B981" />
-
-                      <TextView
-                          android:id="@+id/tvProgress"
-                          android:layout_width="match_parent"
-                          android:layout_height="wrap_content"
-                          android:text="Completed: 0 / 5 Prayers Today"
-                          android:textColor="#FBBF24"
-                          android:textSize="15sp"
-                          android:textStyle="bold"
-                          android:gravity="center"
-                          android:layout_marginTop="8dp" />
-                  </LinearLayout>
-
-                  <LinearLayout
-                      android:layout_width="match_parent"
-                      android:layout_height="wrap_content"
-                      android:orientation="vertical"
-                      android:background="@drawable/card_bg"
-                      android:padding="14dp"
-                      android:layout_marginTop="14dp">
-
-                      <TextView
-                          android:layout_width="wrap_content"
-                          android:layout_height="wrap_content"
-                          android:text="🧭 Live Qibla Direction"
-                          android:textColor="#A7F3D0"
-                          android:textSize="17sp"
-                          android:textStyle="bold" />
-
-                      <TextView
-                          android:id="@+id/tvQiblaTarget"
-                          android:layout_width="match_parent"
-                          android:layout_height="wrap_content"
-                          android:text="Qibla Bearing from City: 123° SE"
-                          android:textColor="#FFFFFF"
-                          android:textSize="16sp"
-                          android:layout_marginTop="6dp" />
-
-                      <TextView
-                          android:id="@+id/tvCompassLive"
-                          android:layout_width="match_parent"
-                          android:layout_height="wrap_content"
-                          android:text="Phone Heading: Calibrating sensor..."
-                          android:textColor="#6EE7B7"
-                          android:textSize="15sp"
-                          android:textStyle="bold"
-                          android:layout_marginTop="4dp" />
-                  </LinearLayout>
-
-                  <LinearLayout
-                      android:layout_width="match_parent"
-                      android:layout_height="wrap_content"
-                      android:orientation="vertical"
-                      android:background="@drawable/card_bg"
-                      android:padding="16dp"
-                      android:layout_marginTop="14dp"
-                      android:layout_marginBottom="24dp"
-                      android:gravity="center">
-
-                      <TextView
-                          android:layout_width="wrap_content"
-                          android:layout_height="wrap_content"
-                          android:text="📿 Digital Tasbih Counter"
-                          android:textColor="#A7F3D0"
-                          android:textSize="17sp"
-                          android:textStyle="bold" />
-
-                      <TextView
-                          android:id="@+id/tvDhikrPhrase"
-                          android:layout_width="wrap_content"
-                          android:layout_height="wrap_content"
-                          android:text="SubhanAllah (1 - 33)"
-                          android:textColor="#6EE7B7"
-                          android:textSize="15sp"
-                          android:layout_marginTop="6dp" />
-
-                      <TextView
-                          android:id="@+id/tvTasbihCount"
-                          android:layout_width="wrap_content"
-                          android:layout_height="wrap_content"
-                          android:text="0"
-                          android:textColor="#FFFFFF"
-                          android:textSize="48sp"
-                          android:textStyle="bold"
-                          android:layout_marginTop="8dp"
-                          android:layout_marginBottom="8dp" />
-
-                      <LinearLayout
-                          android:layout_width="match_parent"
-                          android:layout_height="wrap_content"
-                          android:orientation="horizontal"
-                          android:gravity="center">
-
-                          <Button
-                              android:id="@+id/btnTasbihTap"
-                              android:layout_width="0dp"
-                              android:layout_height="60dp"
-                              android:layout_weight="2"
-                              android:text="TAP TO COUNT (+1)"
-                              android:textSize="16sp"
-                              android:textStyle="bold"
-                              android:backgroundTint="#10B981"
-                              android:textColor="#022C22"
-                              android:layout_marginEnd="8dp" />
-
-                          <Button
-                              android:id="@+id/btnTasbihReset"
-                              android:layout_width="0dp"
-                              android:layout_height="60dp"
-                              android:layout_weight="1"
-                              android:text="Reset"
-                              android:backgroundTint="#047857"
-                              android:textColor="#FFFFFF" />
-                      </LinearLayout>
-                  </LinearLayout>
-
-              </LinearLayout>
+          android:layout_width="match_parent"
+          android:layout_height="match_parent"
+          android:background="#022C22"
+          android:padding="18dp">
+          <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical">
+          <TextView
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="🕌 Namaz Tracker Pro"
+          android:textColor="#FFFFFF"
+          android:textSize="26sp"
+          android:textStyle="bold" />
+          <TextView
+          android:id="@+id/tvDate"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="Loading Hijri &amp; Gregorian Date..."
+          android:textColor="#6EE7B7"
+          android:textSize="13sp"
+          android:layout_marginTop="4dp" />
+          <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:background="@drawable/card_bg"
+          android:padding="14dp"
+          android:layout_marginTop="14dp">
+          <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="horizontal">
+          <EditText
+          android:id="@+id/etCity"
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:hint="City (e.g. Rome)"
+          android:text="Rome"
+          android:textColor="#FFFFFF"
+          android:textColorHint="#A7F3D0"
+          android:backgroundTint="#10B981" />
+          <Button
+          android:id="@+id/btnFetch"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="Update"
+          android:backgroundTint="#10B981"
+          android:textColor="#022C22" />
+          </LinearLayout>
+          <TextView
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="Asr Juristic Method:"
+          android:textColor="#A7F3D0"
+          android:textSize="13sp"
+          android:layout_marginTop="8dp" />
+          <RadioGroup
+          android:id="@+id/rgSchool"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="horizontal"
+          android:layout_marginTop="4dp">
+          <RadioButton
+          android:id="@+id/rbStandard"
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:text="Standard (Shafi)"
+          android:textColor="#FFFFFF"
+          android:buttonTint="#10B981"
+          android:checked="true" />
+          <RadioButton
+          android:id="@+id/rbHanafi"
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:text="Hanafi"
+          android:textColor="#FFFFFF"
+          android:buttonTint="#10B981" />
+          </RadioGroup>
+          </LinearLayout>
+          <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:background="@drawable/card_bg"
+          android:padding="14dp"
+          android:layout_marginTop="14dp">
+          <TextView
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="Today Namaz &amp; Checklist"
+          android:textColor="#A7F3D0"
+          android:textSize="17sp"
+          android:textStyle="bold"
+          android:layout_marginBottom="6dp" />
+          <CheckBox android:id="@+id/cbFajr" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Fajr: --:--" android:textColor="#FFFFFF" android:textSize="17sp" android:padding="8dp" android:buttonTint="#10B981" />
+          <CheckBox android:id="@+id/cbSunrise" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Sunrise: --:-- (Info)" android:textColor="#6EE7B7" android:textSize="14sp" android:padding="6dp" android:enabled="false" android:buttonTint="#047857" />
+          <CheckBox android:id="@+id/cbDhuhr" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Dhuhr: --:--" android:textColor="#FFFFFF" android:textSize="17sp" android:padding="8dp" android:buttonTint="#10B981" />
+          <CheckBox android:id="@+id/cbAsr" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Asr: --:--" android:textColor="#FFFFFF" android:textSize="17sp" android:padding="8dp" android:buttonTint="#10B981" />
+          <CheckBox android:id="@+id/cbMaghrib" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Maghrib: --:--" android:textColor="#FFFFFF" android:textSize="17sp" android:padding="8dp" android:buttonTint="#10B981" />
+          <CheckBox android:id="@+id/cbIsha" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Isha: --:--" android:textColor="#FFFFFF" android:textSize="17sp" android:padding="8dp" android:buttonTint="#10B981" />
+          <TextView
+          android:id="@+id/tvProgress"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:text="Completed: 0 / 5 Prayers Today"
+          android:textColor="#FBBF24"
+          android:textSize="15sp"
+          android:textStyle="bold"
+          android:gravity="center"
+          android:layout_marginTop="8dp" />
+          </LinearLayout>
+          <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:background="@drawable/card_bg"
+          android:padding="14dp"
+          android:layout_marginTop="14dp">
+          <TextView
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="🧭 Live Qibla Direction"
+          android:textColor="#A7F3D0"
+          android:textSize="17sp"
+          android:textStyle="bold" />
+          <TextView
+          android:id="@+id/tvQiblaTarget"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:text="Qibla Bearing from City: 123° SE"
+          android:textColor="#FFFFFF"
+          android:textSize="16sp"
+          android:layout_marginTop="6dp" />
+          <TextView
+          android:id="@+id/tvCompassLive"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:text="Phone Heading: Calibrating sensor..."
+          android:textColor="#6EE7B7"
+          android:textSize="15sp"
+          android:textStyle="bold"
+          android:layout_marginTop="4dp" />
+          </LinearLayout>
+          <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:background="@drawable/card_bg"
+          android:padding="16dp"
+          android:layout_marginTop="14dp"
+          android:layout_marginBottom="24dp"
+          android:gravity="center">
+          <TextView
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="📿 Digital Tasbih Counter"
+          android:textColor="#A7F3D0"
+          android:textSize="17sp"
+          android:textStyle="bold" />
+          <TextView
+          android:id="@+id/tvDhikrPhrase"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="SubhanAllah (1 - 33)"
+          android:textColor="#6EE7B7"
+          android:textSize="15sp"
+          android:layout_marginTop="6dp" />
+          <TextView
+          android:id="@+id/tvTasbihCount"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="0"
+          android:textColor="#FFFFFF"
+          android:textSize="48sp"
+          android:textStyle="bold"
+          android:layout_marginTop="8dp"
+          android:layout_marginBottom="8dp" />
+          <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="horizontal"
+          android:gravity="center">
+          <Button
+          android:id="@+id/btnTasbihTap"
+          android:layout_width="0dp"
+          android:layout_height="60dp"
+          android:layout_weight="2"
+          android:text="TAP TO COUNT (+1)"
+          android:textSize="16sp"
+          android:textStyle="bold"
+          android:backgroundTint="#10B981"
+          android:textColor="#022C22"
+          android:layout_marginEnd="8dp" />
+          <Button
+          android:id="@+id/btnTasbihReset"
+          android:layout_width="0dp"
+          android:layout_height="60dp"
+          android:layout_weight="1"
+          android:text="Reset"
+          android:backgroundTint="#047857"
+          android:textColor="#FFFFFF" />
+          </LinearLayout>
+          </LinearLayout>
+          </LinearLayout>
           </ScrollView>
-          """,
+          """)
 
-              "app/src/main/java/com/imran/namaztracker/NamazWidget.kt": """package com.imran.namaztracker
-
+          w("app/src/main/java/com/imran/namaztracker/NamazWidget.kt", """
+          package com.imran.namaztracker
           import android.app.PendingIntent
           import android.appwidget.AppWidgetManager
           import android.appwidget.AppWidgetProvider
@@ -476,50 +440,45 @@ jobs:
           import android.widget.RemoteViews
 
           class NamazWidget : AppWidgetProvider() {
-              override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-                  for (appWidgetId in appWidgetIds) {
-                      updateWidget(context, appWidgetManager, appWidgetId)
-                  }
-              }
-
-              companion object {
-                  fun updateAllWidgets(context: Context) {
-                      val manager = AppWidgetManager.getInstance(context)
-                      val ids = manager.getAppWidgetIds(ComponentName(context, NamazWidget::class.java))
-                      for (id in ids) {
-                          updateWidget(context, manager, id)
-                      }
-                  }
-
-                  fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
-                      val prefs = context.getSharedPreferences("NamazPrefs", Context.MODE_PRIVATE)
-                      val city = prefs.getString("city", "Rome") ?: "Rome"
-                      val school = if (prefs.getInt("school", 0) == 1) "Hanafi" else "Standard"
-                      val views = RemoteViews(context.packageName, R.layout.namaz_widget)
-
-                      views.setTextViewText(R.id.widget_city, "🕌 Namaz ($city)")
-                      views.setTextViewText(R.id.widget_school, school)
-                      views.setTextViewText(R.id.w_fajr, prefs.getString("Fajr", "05:30"))
-                      views.setTextViewText(R.id.w_dhuhr, prefs.getString("Dhuhr", "12:55"))
-                      views.setTextViewText(R.id.w_asr, prefs.getString("Asr", "16:10"))
-                      views.setTextViewText(R.id.w_maghrib, prefs.getString("Maghrib", "18:40"))
-                      views.setTextViewText(R.id.w_isha, prefs.getString("Isha", "20:10"))
-
-                      val intent = Intent(context, MainActivity::class.java)
-                      val pendingIntent = PendingIntent.getActivity(
-                          context, 0, intent,
-                          PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                      )
-                      views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
-
-                      appWidgetManager.updateAppWidget(appWidgetId, views)
-                  }
-              }
+          override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+          for (appWidgetId in appWidgetIds) {
+          updateWidget(context, appWidgetManager, appWidgetId)
           }
-          """,
+          }
+          companion object {
+          fun updateAllWidgets(context: Context) {
+          val manager = AppWidgetManager.getInstance(context)
+          val ids = manager.getAppWidgetIds(ComponentName(context, NamazWidget::class.java))
+          for (id in ids) {
+          updateWidget(context, manager, id)
+          }
+          }
+          fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
+          val prefs = context.getSharedPreferences("NamazPrefs", Context.MODE_PRIVATE)
+          val city = prefs.getString("city", "Rome") ?: "Rome"
+          val school = if (prefs.getInt("school", 0) == 1) "Hanafi" else "Standard"
+          val views = RemoteViews(context.packageName, R.layout.namaz_widget)
+          views.setTextViewText(R.id.widget_city, "🕌 Namaz (" + city + ")")
+          views.setTextViewText(R.id.widget_school, school)
+          views.setTextViewText(R.id.w_fajr, prefs.getString("Fajr", "05:30"))
+          views.setTextViewText(R.id.w_dhuhr, prefs.getString("Dhuhr", "12:55"))
+          views.setTextViewText(R.id.w_asr, prefs.getString("Asr", "16:10"))
+          views.setTextViewText(R.id.w_maghrib, prefs.getString("Maghrib", "18:40"))
+          views.setTextViewText(R.id.w_isha, prefs.getString("Isha", "20:10"))
+          val intent = Intent(context, MainActivity::class.java)
+          val pendingIntent = PendingIntent.getActivity(
+          context, 0, intent,
+          PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+          )
+          views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
+          appWidgetManager.updateAppWidget(appWidgetId, views)
+          }
+          }
+          }
+          """)
 
-              "app/src/main/java/com/imran/namaztracker/MainActivity.kt": """package com.imran.namaztracker
-
+          w("app/src/main/java/com/imran/namaztracker/MainActivity.kt", """
+          package com.imran.namaztracker
           import android.content.Context
           import android.hardware.Sensor
           import android.hardware.SensorEvent
@@ -541,275 +500,253 @@ jobs:
           import kotlin.math.*
 
           class MainActivity : AppCompatActivity(), SensorEventListener {
+          private lateinit var etCity: EditText
+          private lateinit var tvDate: TextView
+          private lateinit var tvProgress: TextView
+          private lateinit var cbFajr: CheckBox
+          private lateinit var cbSunrise: CheckBox
+          private lateinit var cbDhuhr: CheckBox
+          private lateinit var cbAsr: CheckBox
+          private lateinit var cbMaghrib: CheckBox
+          private lateinit var cbIsha: CheckBox
+          private lateinit var rgSchool: RadioGroup
+          private lateinit var rbStandard: RadioButton
+          private lateinit var rbHanafi: RadioButton
+          private lateinit var tvQiblaTarget: TextView
+          private lateinit var tvCompassLive: TextView
+          private lateinit var tvTasbihCount: TextView
+          private lateinit var tvDhikrPhrase: TextView
+          private var sensorManager: SensorManager? = null
+          private var accelerometer: Sensor? = null
+          private var magnetometer: Sensor? = null
+          private val gravity = FloatArray(3)
+          private val geomagnetic = FloatArray(3)
+          private var hasGravity = false
+          private var hasGeomagnetic = false
+          private var qiblaAngle = 123.0
 
-              private lateinit var etCity: EditText
-              private lateinit var tvDate: TextView
-              private lateinit var tvProgress: TextView
-              private lateinit var cbFajr: CheckBox
-              private lateinit var cbSunrise: CheckBox
-              private lateinit var cbDhuhr: CheckBox
-              private lateinit var cbAsr: CheckBox
-              private lateinit var cbMaghrib: CheckBox
-              private lateinit var cbIsha: CheckBox
-              private lateinit var rgSchool: RadioGroup
-              private lateinit var rbStandard: RadioButton
-              private lateinit var rbHanafi: RadioButton
-              private lateinit var tvQiblaTarget: TextView
-              private lateinit var tvCompassLive: TextView
-              private lateinit var tvTasbihCount: TextView
-              private lateinit var tvDhikrPhrase: TextView
+          override fun onCreate(savedInstanceState: Bundle?) {
+          super.onCreate(savedInstanceState)
+          setContentView(R.layout.activity_main)
+          etCity = findViewById(R.id.etCity)
+          tvDate = findViewById(R.id.tvDate)
+          tvProgress = findViewById(R.id.tvProgress)
+          cbFajr = findViewById(R.id.cbFajr)
+          cbSunrise = findViewById(R.id.cbSunrise)
+          cbDhuhr = findViewById(R.id.cbDhuhr)
+          cbAsr = findViewById(R.id.cbAsr)
+          cbMaghrib = findViewById(R.id.cbMaghrib)
+          cbIsha = findViewById(R.id.cbIsha)
+          rgSchool = findViewById(R.id.rgSchool)
+          rbStandard = findViewById(R.id.rbStandard)
+          rbHanafi = findViewById(R.id.rbHanafi)
+          tvQiblaTarget = findViewById(R.id.tvQiblaTarget)
+          tvCompassLive = findViewById(R.id.tvCompassLive)
+          tvTasbihCount = findViewById(R.id.tvTasbihCount)
+          tvDhikrPhrase = findViewById(R.id.tvDhikrPhrase)
 
-              private var sensorManager: SensorManager? = null
-              private var accelerometer: Sensor? = null
-              private var magnetometer: Sensor? = null
-              private val gravity = FloatArray(3)
-              private val geomagnetic = FloatArray(3)
-              private var hasGravity = false
-              private var hasGeomagnetic = false
-              private var qiblaAngle = 123.0
+          val prefs = getSharedPreferences("NamazPrefs", Context.MODE_PRIVATE)
+          val savedCity = prefs.getString("city", "Rome") ?: "Rome"
+          val savedSchool = prefs.getInt("school", 0)
+          qiblaAngle = prefs.getFloat("qibla", 123.0f).toDouble()
+          etCity.setText(savedCity)
+          if (savedSchool == 1) rbHanafi.isChecked = true else rbStandard.isChecked = true
 
-              override fun onCreate(savedInstanceState: Bundle?) {
-                  super.onCreate(savedInstanceState)
-                  setContentView(R.layout.activity_main)
-
-                  etCity = findViewById(R.id.etCity)
-                  tvDate = findViewById(R.id.tvDate)
-                  tvProgress = findViewById(R.id.tvProgress)
-                  cbFajr = findViewById(R.id.cbFajr)
-                  cbSunrise = findViewById(R.id.cbSunrise)
-                  cbDhuhr = findViewById(R.id.cbDhuhr)
-                  cbAsr = findViewById(R.id.cbAsr)
-                  cbMaghrib = findViewById(R.id.cbMaghrib)
-                  cbIsha = findViewById(R.id.cbIsha)
-                  rgSchool = findViewById(R.id.rgSchool)
-                  rbStandard = findViewById(R.id.rbStandard)
-                  rbHanafi = findViewById(R.id.rbHanafi)
-                  tvQiblaTarget = findViewById(R.id.tvQiblaTarget)
-                  tvCompassLive = findViewById(R.id.tvCompassLive)
-                  tvTasbihCount = findViewById(R.id.tvTasbihCount)
-                  tvDhikrPhrase = findViewById(R.id.tvDhikrPhrase)
-
-                  val prefs = getSharedPreferences("NamazPrefs", Context.MODE_PRIVATE)
-                  val savedCity = prefs.getString("city", "Rome") ?: "Rome"
-                  val savedSchool = prefs.getInt("school", 0)
-                  qiblaAngle = prefs.getFloat("qibla", 123.0f).toDouble()
-
-                  etCity.setText(savedCity)
-                  if (savedSchool == 1) rbHanafi.isChecked = true else rbStandard.isChecked = true
-
-                  val todayKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-                  val boxes = listOf(
-                      Pair("Fajr", cbFajr),
-                      Pair("Dhuhr", cbDhuhr),
-                      Pair("Asr", cbAsr),
-                      Pair("Maghrib", cbMaghrib),
-                      Pair("Isha", cbIsha)
-                  )
-
-                  for ((name, box) in boxes) {
-                      box.isChecked = prefs.getBoolean("${todayKey}_$name", false)
-                      box.setOnCheckedChangeListener { _, isChecked ->
-                          prefs.edit().putBoolean("${todayKey}_$name", isChecked).apply()
-                          updateProgress(boxes)
-                      }
-                  }
-                  updateProgress(boxes)
-                  loadSavedTimes()
-
-                  val currentSchool = if (rbHanafi.isChecked) 1 else 0
-                  fetchPrayerTimes(savedCity, currentSchool)
-
-                  findViewById<Button>(R.id.btnFetch).setOnClickListener {
-                      val city = etCity.text.toString().trim()
-                      val school = if (rbHanafi.isChecked) 1 else 0
-                      if (city.isNotEmpty()) {
-                          fetchPrayerTimes(city, school)
-                      }
-                  }
-
-                  rgSchool.setOnCheckedChangeListener { _, checkedId ->
-                      val school = if (checkedId == R.id.rbHanafi) 1 else 0
-                      val city = etCity.text.toString().trim().ifEmpty { "Rome" }
-                      fetchPrayerTimes(city, school)
-                  }
-
-                  var tasbih = prefs.getInt("tasbih_count", 0)
-                  updateTasbihUI(tasbih)
-
-                  findViewById<Button>(R.id.btnTasbihTap).setOnClickListener {
-                      tasbih++
-                      prefs.edit().putInt("tasbih_count", tasbih).apply()
-                      updateTasbihUI(tasbih)
-                      vibratePhone(35)
-                  }
-
-                  findViewById<Button>(R.id.btnTasbihReset).setOnClickListener {
-                      tasbih = 0
-                      prefs.edit().putInt("tasbih_count", 0).apply()
-                      updateTasbihUI(0)
-                      vibratePhone(80)
-                  }
-
-                  sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-                  accelerometer = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-                  magnetometer = sensorManager?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
-              }
-
-              private fun vibratePhone(durationMs: Long) {
-                  try {
-                      val v = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                          v.vibrate(VibrationEffect.createOneShot(durationMs, VibrationEffect.DEFAULT_AMPLITUDE))
-                      } else {
-                          @Suppress("DEPRECATION")
-                          v.vibrate(durationMs)
-                      }
-                  } catch (_: Exception) {}
-              }
-
-              private fun updateTasbihUI(count: Int) {
-                  tvTasbihCount.text = count.toString()
-                  val cycle = count % 99
-                  tvDhikrPhrase.text = when {
-                      cycle < 33 -> "SubhanAllah (${(count % 33) + 1} / 33)"
-                      cycle < 66 -> "Alhamdulillah (${(count % 33) + 1} / 33)"
-                      else -> "Allahu Akbar (${(count % 33) + 1} / 33)"
-                  }
-              }
-
-              override fun onResume() {
-                  super.onResume()
-                  accelerometer?.let { sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_UI) }
-                  magnetometer?.let { sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_UI) }
-              }
-
-              override fun onPause() {
-                  super.onPause()
-                  sensorManager?.unregisterListener(this)
-              }
-
-              override fun onSensorChanged(event: SensorEvent?) {
-                  if (event == null) return
-                  if (event.sensor.type == Sensor.TYPE_ACCELEROMETER) {
-                      System.arraycopy(event.values, 0, gravity, 0, event.values.size)
-                      hasGravity = true
-                  } else if (event.sensor.type == Sensor.TYPE_MAGNETIC_FIELD) {
-                      System.arraycopy(event.values, 0, geomagnetic, 0, event.values.size)
-                      hasGeomagnetic = true
-                  }
-                  if (hasGravity && hasGeomagnetic) {
-                      val R = FloatArray(9)
-                      val I = FloatArray(9)
-                      if (SensorManager.getRotationMatrix(R, I, gravity, geomagnetic)) {
-                          val orientation = FloatArray(3)
-                          SensorManager.getOrientation(R, orientation)
-                          var azimuth = Math.toDegrees(orientation[0].toDouble())
-                          azimuth = (azimuth + 360) % 360
-                          val diff = abs(azimuth - qiblaAngle)
-                          val aligned = diff < 8 || diff > 352
-                          val status = if (aligned) "✅ FACING QIBLA!" else "Rotate phone to match ${qiblaAngle.roundToInt()}°"
-                          tvCompassLive.text = "Phone Heading: ${azimuth.roundToInt()}°  •  $status"
-                      }
-                  }
-              }
-
-              override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-
-              private fun calculateQibla(lat: Double, lon: Double): Double {
-                  val kaabaLat = Math.toRadians(21.422487)
-                  val kaabaLon = Math.toRadians(39.826206)
-                  val userLat = Math.toRadians(lat)
-                  val dLon = kaabaLon - Math.toRadians(lon)
-                  val y = sin(dLon) * cos(kaabaLat)
-                  val x = cos(userLat) * sin(kaabaLat) - sin(userLat) * cos(kaabaLat) * cos(dLon)
-                  return (Math.toDegrees(atan2(y, x)) + 360) % 360
-              }
-
-              private fun updateProgress(boxes: List<Pair<String, CheckBox>>) {
-                  val count = boxes.count { it.second.isChecked }
-                  tvProgress.text = "Completed: $count / 5 Prayers Today"
-              }
-
-              private fun loadSavedTimes() {
-                  val prefs = getSharedPreferences("NamazPrefs", Context.MODE_PRIVATE)
-                  cbFajr.text = "Fajr: ${prefs.getString("Fajr", "--:--")}"
-                  cbSunrise.text = "Sunrise: ${prefs.getString("Sunrise", "--:--")} (Info)"
-                  cbDhuhr.text = "Dhuhr: ${prefs.getString("Dhuhr", "--:--")}"
-                  cbAsr.text = "Asr: ${prefs.getString("Asr", "--:--")}"
-                  cbMaghrib.text = "Maghrib: ${prefs.getString("Maghrib", "--:--")}"
-                  cbIsha.text = "Isha: ${prefs.getString("Isha", "--:--")}"
-                  tvQiblaTarget.text = "Qibla Bearing from ${prefs.getString("city", "Rome")}: ${qiblaAngle.roundToInt()}° from North"
-              }
-
-              private fun fetchPrayerTimes(city: String, school: Int) {
-                  thread {
-                      try {
-                          val encodedCity = URLEncoder.encode(city, "UTF-8")
-                          val url = URL("https://api.aladhan.com/v1/timingsByAddress?address=$encodedCity&method=3&school=$school")
-                          val conn = url.openConnection() as HttpURLConnection
-                          conn.requestMethod = "GET"
-                          val response = conn.inputStream.bufferedReader().readText()
-                          val json = JSONObject(response).getJSONObject("data")
-                          val timings = json.getJSONObject("timings")
-                          val meta = json.getJSONObject("meta")
-                          val lat = meta.getDouble("latitude")
-                          val lon = meta.getDouble("longitude")
-                          val calculatedQibla = calculateQibla(lat, lon)
-
-                          val dateInfo = json.getJSONObject("date")
-                          val readableDate = dateInfo.getString("readable")
-                          val hijri = dateInfo.getJSONObject("hijri")
-                          val hijriStr = "${hijri.getString("day")} ${hijri.getJSONObject("month").getString("en")} ${hijri.getString("year")} AH"
-
-                          val fajr = timings.getString("Fajr")
-                          val sunrise = timings.getString("Sunrise")
-                          val dhuhr = timings.getString("Dhuhr")
-                          val asr = timings.getString("Asr")
-                          val maghrib = timings.getString("Maghrib")
-                          val isha = timings.getString("Isha")
-
-                          val prefs = getSharedPreferences("NamazPrefs", Context.MODE_PRIVATE)
-                          prefs.edit()
-                              .putString("city", city)
-                              .putInt("school", school)
-                              .putFloat("qibla", calculatedQibla.toFloat())
-                              .putString("Fajr", fajr)
-                              .putString("Sunrise", sunrise)
-                              .putString("Dhuhr", dhuhr)
-                              .putString("Asr", asr)
-                              .putString("Maghrib", maghrib)
-                              .putString("Isha", isha)
-                              .apply()
-
-                          qiblaAngle = calculatedQibla
-
-                          runOnUiThread {
-                              tvDate.text = "$readableDate  •  $hijriStr"
-                              loadSavedTimes()
-                              NamazWidget.updateAllWidgets(this)
-                              val schoolName = if (school == 1) "Hanafi" else "Standard"
-                              Toast.makeText(this, "Updated: $city ($schoolName)", Toast.LENGTH_SHORT).show()
-                          }
-                      } catch (e: Exception) {
-                          runOnUiThread {
-                              Toast.makeText(this, "Could not fetch times. Check internet.", Toast.LENGTH_SHORT).show()
-                          }
-                      }
-                  }
-              }
+          val todayKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+          val boxes = listOf(
+          Pair("Fajr", cbFajr),
+          Pair("Dhuhr", cbDhuhr),
+          Pair("Asr", cbAsr),
+          Pair("Maghrib", cbMaghrib),
+          Pair("Isha", cbIsha)
+          )
+          for ((name, box) in boxes) {
+          box.isChecked = prefs.getBoolean(todayKey + "_" + name, false)
+          box.setOnCheckedChangeListener { _, isChecked ->
+          prefs.edit().putBoolean(todayKey + "_" + name, isChecked).apply()
+          updateProgress(boxes)
           }
-          """
+          }
+          updateProgress(boxes)
+          loadSavedTimes()
+          val currentSchool = if (rbHanafi.isChecked) 1 else 0
+          fetchPrayerTimes(savedCity, currentSchool)
+
+          findViewById<Button>(R.id.btnFetch).setOnClickListener {
+          val city = etCity.text.toString().trim()
+          val school = if (rbHanafi.isChecked) 1 else 0
+          if (city.isNotEmpty()) {
+          fetchPrayerTimes(city, school)
+          }
+          }
+          rgSchool.setOnCheckedChangeListener { _, checkedId ->
+          val school = if (checkedId == R.id.rbHanafi) 1 else 0
+          val city = etCity.text.toString().trim().ifEmpty { "Rome" }
+          fetchPrayerTimes(city, school)
+          }
+          var tasbih = prefs.getInt("tasbih_count", 0)
+          updateTasbihUI(tasbih)
+          findViewById<Button>(R.id.btnTasbihTap).setOnClickListener {
+          tasbih++
+          prefs.edit().putInt("tasbih_count", tasbih).apply()
+          updateTasbihUI(tasbih)
+          vibratePhone(35)
+          }
+          findViewById<Button>(R.id.btnTasbihReset).setOnClickListener {
+          tasbih = 0
+          prefs.edit().putInt("tasbih_count", 0).apply()
+          updateTasbihUI(0)
+          vibratePhone(80)
+          }
+          sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+          accelerometer = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+          magnetometer = sensorManager?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
           }
 
-          for path, content in files.items():
-              dirpath = os.path.dirname(path)
-              if dirpath:
-                  os.makedirs(dirpath, exist_ok=True)
-              with open(path, "w", encoding="utf-8") as f:
-                  f.write(content.strip() + "\n")
+          private fun vibratePhone(durationMs: Long) {
+          try {
+          val v = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          v.vibrate(VibrationEffect.createOneShot(durationMs, VibrationEffect.DEFAULT_AMPLITUDE))
+          } else {
+          @Suppress("DEPRECATION")
+          v.vibrate(durationMs)
+          }
+          } catch (_: Exception) {}
+          }
 
-      - name: Build Debug APK
-        run: gradle assembleDebug
+          private fun updateTasbihUI(count: Int) {
+          tvTasbihCount.text = count.toString()
+          val cycle = count % 99
+          val step = (count % 33) + 1
+          tvDhikrPhrase.text = when {
+          cycle < 33 -> "SubhanAllah (" + step + " / 33)"
+          cycle < 66 -> "Alhamdulillah (" + step + " / 33)"
+          else -> "Allahu Akbar (" + step + " / 33)"
+          }
+          }
+
+          override fun onResume() {
+          super.onResume()
+          accelerometer?.let { sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_UI) }
+          magnetometer?.let { sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_UI) }
+          }
+
+          override fun onPause() {
+          super.onPause()
+          sensorManager?.unregisterListener(this)
+          }
+
+          override fun onSensorChanged(event: SensorEvent?) {
+          if (event == null) return
+          if (event.sensor.type == Sensor.TYPE_ACCELEROMETER) {
+          System.arraycopy(event.values, 0, gravity, 0, event.values.size)
+          hasGravity = true
+          } else if (event.sensor.type == Sensor.TYPE_MAGNETIC_FIELD) {
+          System.arraycopy(event.values, 0, geomagnetic, 0, event.values.size)
+          hasGeomagnetic = true
+          }
+          if (hasGravity && hasGeomagnetic) {
+          val R = FloatArray(9)
+          val I = FloatArray(9)
+          if (SensorManager.getRotationMatrix(R, I, gravity, geomagnetic)) {
+          val orientation = FloatArray(3)
+          SensorManager.getOrientation(R, orientation)
+          var azimuth = Math.toDegrees(orientation[0].toDouble())
+          azimuth = (azimuth + 360) % 360
+          val diff = abs(azimuth - qiblaAngle)
+          val aligned = diff < 8 || diff > 352
+          val status = if (aligned) "✅ FACING QIBLA!" else "Rotate phone to match " + qiblaAngle.roundToInt() + "°"
+          tvCompassLive.text = "Phone Heading: " + azimuth.roundToInt() + "°  •  " + status
+          }
+          }
+          }
+
+          override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+
+          private fun calculateQibla(lat: Double, lon: Double): Double {
+          val kaabaLat = Math.toRadians(21.422487)
+          val kaabaLon = Math.toRadians(39.826206)
+          val userLat = Math.toRadians(lat)
+          val dLon = kaabaLon - Math.toRadians(lon)
+          val y = sin(dLon) * cos(kaabaLat)
+          val x = cos(userLat) * sin(kaabaLat) - sin(userLat) * cos(kaabaLat) * cos(dLon)
+          return (Math.toDegrees(atan2(y, x)) + 360) % 360
+          }
+
+          private fun updateProgress(boxes: List<Pair<String, CheckBox>>) {
+          val count = boxes.count { it.second.isChecked }
+          tvProgress.text = "Completed: " + count + " / 5 Prayers Today"
+          }
+
+          private fun loadSavedTimes() {
+          val prefs = getSharedPreferences("NamazPrefs", Context.MODE_PRIVATE)
+          cbFajr.text = "Fajr: " + prefs.getString("Fajr", "--:--")
+          cbSunrise.text = "Sunrise: " + prefs.getString("Sunrise", "--:--") + " (Info)"
+          cbDhuhr.text = "Dhuhr: " + prefs.getString("Dhuhr", "--:--")
+          cbAsr.text = "Asr: " + prefs.getString("Asr", "--:--")
+          cbMaghrib.text = "Maghrib: " + prefs.getString("Maghrib", "--:--")
+          cbIsha.text = "Isha: " + prefs.getString("Isha", "--:--")
+          tvQiblaTarget.text = "Qibla Bearing from " + prefs.getString("city", "Rome") + ": " + qiblaAngle.roundToInt() + "° from North"
+          }
+
+          private fun fetchPrayerTimes(city: String, school: Int) {
+          thread {
+          try {
+          val encodedCity = URLEncoder.encode(city, "UTF-8")
+          val url = URL("https://api.aladhan.com/v1/timingsByAddress?address=" + encodedCity + "&method=3&school=" + school)
+          val conn = url.openConnection() as HttpURLConnection
+          conn.requestMethod = "GET"
+          val response = conn.inputStream.bufferedReader().readText()
+          val json = JSONObject(response).getJSONObject("data")
+          val timings = json.getJSONObject("timings")
+          val meta = json.getJSONObject("meta")
+          val lat = meta.getDouble("latitude")
+          val lon = meta.getDouble("longitude")
+          val calculatedQibla = calculateQibla(lat, lon)
+          val dateInfo = json.getJSONObject("date")
+          val readableDate = dateInfo.getString("readable")
+          val hijri = dateInfo.getJSONObject("hijri")
+          val hijriStr = hijri.getString("day") + " " + hijri.getJSONObject("month").getString("en") + " " + hijri.getString("year") + " AH"
+          val fajr = timings.getString("Fajr")
+          val sunrise = timings.getString("Sunrise")
+          val dhuhr = timings.getString("Dhuhr")
+          val asr = timings.getString("Asr")
+          val maghrib = timings.getString("Maghrib")
+          val isha = timings.getString("Isha")
+          val prefs = getSharedPreferences("NamazPrefs", Context.MODE_PRIVATE)
+          prefs.edit()
+          .putString("city", city)
+          .putInt("school", school)
+          .putFloat("qibla", calculatedQibla.toFloat())
+          .putString("Fajr", fajr)
+          .putString("Sunrise", sunrise)
+          .putString("Dhuhr", dhuhr)
+          .putString("Asr", asr)
+          .putString("Maghrib", maghrib)
+          .putString("Isha", isha)
+          .apply()
+          qiblaAngle = calculatedQibla
+          runOnUiThread {
+          tvDate.text = readableDate + "  •  " + hijriStr
+          loadSavedTimes()
+          NamazWidget.updateAllWidgets(this)
+          val schoolName = if (school == 1) "Hanafi" else "Standard"
+          Toast.makeText(this, "Updated: " + city + " (" + schoolName + ")", Toast.LENGTH_SHORT).show()
+          }
+          } catch (e: Exception) {
+          runOnUiThread {
+          Toast.makeText(this, "Could not fetch times. Check internet.", Toast.LENGTH_SHORT).show()
+          }
+          }
+          }
+          }
+          }
+          """)
+          '
+          wget -q https://services.gradle.org/distributions/gradle-8.4-bin.zip
+          unzip -q gradle-8.4-bin.zip
+          ./gradle-8.4/bin/gradle assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
